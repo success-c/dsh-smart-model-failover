@@ -6,7 +6,7 @@
 
 | 项 | 值 |
 | --- | --- |
-| npm | `dsh-smart-model-failover@0.2.0` 已发布、`latest` 指向它（0.1.0 仍可安装）；0.2.0 修复了自动续跑消息缺少 `id`/`role` 导致会话日志被判 corrupt 的问题 |
+| npm | `dsh-smart-model-failover@0.2.3` 已发布、`latest` 指向它（0.1.0 仍可安装）；0.2.0 修复了自动续跑消息缺少 `id`/`role` 导致会话日志被判 corrupt 的问题，0.2.3 把插件描述改成不点名其他插件 |
 | 仓库 | https://github.com/success-c/dsh-smart-model-failover（public，topics 含 `dsh-plugin`） |
 | 收录 PR | https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/17165（只加 1 个文件 `data/plugins/success-c__dsh-smart-model-failover.yml`） |
 | 待过门槛 | 精选列表 CI 要求仓库创建满 1 天；今天刚建库，CI 的 age 项会自动重跑通过，**不需要推空提交** |
@@ -20,6 +20,7 @@
   先在 https://www.npmjs.com/settings/~/profile 开启 Authenticator app，或用带 Bypass 2FA 的 Granular token。
 - **新包名首发会先出现 `0.0.0-stage` 占位**（npm 的 staged publishing）。`npm publish` 报成功但
   `npm view <pkg> version` 仍显示 `0.0.0-stage`，等 1-3 分钟真实版本才可见；别在这个窗口里误判发布失败、急着换包名。
+- **0.2.3（2026-11-20）**：插件描述、README 与设置项示例不再出现其他插件/厂商名称；统一表述为「任何插件注册进宿主的 provider 都会自动进入候选池」。
 - **0.2.0（2026-11-20）**：自动切换后的续跑消息改为带 `id`（UUID）与 `role: "user"`。宿主把 `agent.followup()`
   的入参原样持久化为 `user/message`，缺这两个字段会让整个会话在重新打开时报
   `lacks an identified message`；旧版已经写坏的会话需要按同字段单独修复。
