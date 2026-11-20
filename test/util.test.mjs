@@ -8,6 +8,7 @@ import {
 	NON_SWITCH_CODES,
 	parseRoute,
 	routeLabel,
+	unwrapConfig,
 	withTimeout,
 } from "../lib/util.js";
 
@@ -86,4 +87,13 @@ test("code sets cover the documented failover policy", () => {
 		assert.ok(NON_SWITCH_CODES.has(code), code);
 	}
 	assert.ok(!NON_SWITCH_CODES.has("RATE_LIMIT"));
+});
+
+test("unwraps a schemastery volatile config reference", () => {
+	const ref = { get: () => ({ enabled: false, order: ["meng/mimo"] }) };
+	assert.deepEqual(unwrapConfig(ref).order, ["meng/mimo"]);
+	assert.equal(normalizeConfig(ref).enabled, false);
+	// Plain objects, null and garbage all stay safe.
+	assert.equal(normalizeConfig({}).enabled, DEFAULTS.enabled);
+	assert.equal(normalizeConfig(null).enabled, DEFAULTS.enabled);
 });

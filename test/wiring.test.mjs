@@ -332,3 +332,31 @@ test("invalidates the catalog when the host announces new adapters", async () =>
 	assert.equal(harness.records().some((record) => record.kind === "exhausted"), true);
 	harness.dispose();
 });
+
+test("reads a volatile config live, so settings edits apply without a restart", async () => {
+	const harness = makeHarness();
+	const state = { enabled: true };
+	// What `Config.volatile()` hands to `apply()`: a stable reference, not data.
+	const ref = { get: () => ({ enabled: state.enabled }) };
+	harness.ctx.llm = {
+		listProviders: () => [{ id: "huoshan" }, { id: "meng" }],
+		listModels: async (id) => [{ id: id === "huoshan" ? "flash-a" : "flash-b" }],
+	};
+	harness.start(ref);
+	assert.equal(harness.records().some((record) => record.kind === "loaded"), true);
+
+	const agent = makeAgent({ provider: "huoshan", model: "flash-a" });
+	await harness.requestError(failure(agent));
+	assert.deepEqual(agent.model.current(), { provider: "meng", model: "flash-b" });
+
+	// The settings page flips the master switch off; no remount happens.
+	state.enabled = false;
+	harness.emit("loader/volatile-update");
+	assert.equal(harness.records().some((record) => record.kind === "config-updated"), true);
+
+	const other = makeAgent({ provider: "huoshan", model: "flash-a" });
+	const delegated = await harness.requestError(failure(other), async () => ({ kind: "retry" }));
+	assert.deepEqual(delegated, { kind: "retry" });
+	assert.deepEqual(other.model.current(), { provider: "huoshan", model: "flash-a" });
+	harness.dispose();
+});

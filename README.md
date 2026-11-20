@@ -115,6 +115,7 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 | `loaded` | 插件已加载 |
 | `discovered` / `discover-empty` / `discover-timeout` / `discover-failed` | 发现结果：正常 / 该厂商没有可用模型 / 列举超时 / 列举报错（后三者都带 `provider` 字段，抛错还带 `error`） |
 | `cache-invalidated` | 宿主宣布适配器/模型变化，缓存被清 |
+| `config-updated` | 你在设置页改了配置，插件已按新值运行（无需重启） |
 | `switch` | 完成一次切换 |
 | `resume-sent` / `resume-failed` | 续跑已投递 / 投递失败 |
 | `max-switches` | 达到单轮切换上限 |
@@ -149,7 +150,7 @@ npm test        # node --test，纯 mock 宿主，不需要真 DSH
 - `lib/index.js` 接线（事件、切换、续跑）
 - `lib/catalog.js` 发现 + 候选排序（纯逻辑，好测）
 - `lib/util.js` 解析/归一化/错误码策略
-- `lib/config.js` schemastery 配置（DSH 设置页表单来源）
+- `lib/config.js` schemastery 配置（`.volatile()` 包装：DSH 设置页只给 volatile 字段出表单，且改完立即生效，无需重启）
 
 ## License
 

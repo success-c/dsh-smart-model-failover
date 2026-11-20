@@ -106,7 +106,7 @@ Cooldown is code-aware: errors that cannot heal by retrying (`AUTH`, `MISSING_CR
 {"kind":"resume-sent","to":"meng/mimo-v2.5","code":"RATE_LIMIT"}
 ```
 
-`kind`: `loaded`, `discovered`, `discover-empty`, `discover-failed`, `cache-invalidated`, `switch`, `resume-sent`, `resume-failed`, `max-switches`, `exhausted`, `select-failed`, `select-not-applied`, `skip-code`.
+`kind`: `loaded`, `discovered`, `discover-empty`, `discover-failed`, `cache-invalidated`, `switch`, `resume-sent`, `resume-failed`, `max-switches`, `exhausted`, `select-failed`, `select-not-applied`, `config-updated`, `skip-code`.
 
 ## FAQ
 
@@ -132,7 +132,7 @@ npm test        # node --test with a mocked host; no real DSH needed
 - `lib/index.js` — wiring (events, switching, resume)
 - `lib/catalog.js` — discovery and candidate ranking (pure logic)
 - `lib/util.js` — parsing, config normalization, error-code policy
-- `lib/config.js` — schemastery config (drives the DSH settings form)
+- `lib/config.js` — schemastery config (wrapped in `.volatile()`: DSH only renders settings controls for volatile fields, and edits then apply without a restart)
 
 ## License
 
