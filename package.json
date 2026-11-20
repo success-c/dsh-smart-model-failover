@@ -1,6 +1,6 @@
 {
   "name": "dsh-smart-model-failover",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "DeepSeek Harness plugin: when a model request fails, automatically switch to the next routable model discovered from every configured provider (and every externally connected one, e.g. WorkBuddy), then resume the interrupted turn.",
   "type": "module",
   "main": "lib/index.js",
