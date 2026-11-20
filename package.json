@@ -1,11 +1,12 @@
 {
   "name": "dsh-smart-model-failover",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "DeepSeek Harness plugin: when a model request fails, automatically switch to the next routable model discovered from every provider registered with the host — including providers added by other plugins — then resume the interrupted turn.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
+    "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
   "files": [
@@ -44,6 +45,13 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "platform": "web"
     }
   },
   "author": "success-c (https://github.com/success-c)",

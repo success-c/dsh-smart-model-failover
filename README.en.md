@@ -8,7 +8,7 @@
 
 DSH's built-in `llm-retry` only backs off and retries the *same* route. When a quota runs out, a credential dies, a model is retired, or a whole provider goes down, it exhausts its retries and the work in that turn is lost. A hand-written static list helps for a while, but every new provider or model means editing config — and externally connected models never make it into the list at all.
 
-This plugin asks the host *what can run right now*, walks the providers **in the order the workspace has them**, tries **one model per provider**, switches when that one fails, and continues. Pin the order in settings when you want it fixed.
+This plugin asks the host *what can run right now*, walks the providers **in the order the workspace has them**, tries **one model per provider**, switches when that one fails, and continues. Pin the order in the plugin's settings panel when you want it fixed.
 
 ## Features
 
@@ -18,7 +18,8 @@ This plugin asks the host *what can run right now*, walks the providers **in the
 - **No repeated dead ends** — a route that already failed in this turn is never retried; failed routes cool down (10 min for ordinary errors, 24 h for credential/quota/retired-model codes).
 - **Two-stage, never fights the host** — calls `await next()` first so `llm-retry` and other owners keep priority.
 - **Does not touch session history** — switches are logged to a separate file; the host itself records the route change (`model/selection` + its `[model changed: ...]` notice).
-- **Configurable** — master switch, per-turn switch cap, provider/model exclusions, provider priority, cooldowns.
+- **Visual settings panel** — from the plugin detail page: a master switch for automatic failover, the model call order (the auto-discovered default is shown, drag to reorder / add / remove), and provider priority. The add box offers a dropdown of the models/providers this profile's configured providers can list, and still accepts free text.
+- **Configurable** — master switch, per-turn switch cap, provider/model exclusions, provider priority, cooldowns; edits apply without a restart.
 
 ## Install
 
@@ -42,8 +43,8 @@ All fields have defaults; an empty config means "pure discovery".
 | Field | Default | Meaning |
 | --- | --- | --- |
 | `enabled` | `true` | **Master switch**. Off means the plugin never takes over a failed request; saved settings apply without a restart |
-| `order` | `[]` | **Attempt order** (`"provider/model"`, or a bare provider name). Listed entries are tried in that order; empty = the workspace's provider order, one model per provider |
-| `providerPriority` | `[]` | Provider order, e.g. `["vendorA","vendorB"]`; only affects providers `order` does not name |
+| `order` | `[]` | **Model call order** (`"provider/model"`, or a bare provider name). The settings panel shows the auto-discovered order by default and lets you drag / add / remove; listed entries are tried in that order; empty = the workspace's provider order, one model per provider |
+| `providerPriority` | `[]` | Provider order, e.g. `["vendorA","vendorB"]`; the settings panel lists this profile's configured providers in a dropdown; only affects providers `order` does not name |
 | `modelPreference` | `["flash","haiku","mini","lite"]` | Which model to pick per provider during discovery: earliest substring match wins |
 | `excludeProviders` | `[]` | Providers never used as a target |
 | `excludePatterns` | `["embed","rerank","moderation"]` | Model-id substrings never used as a target (case-insensitive) |
@@ -132,7 +133,9 @@ npm test        # node --test with a mocked host; no real DSH needed
 - `lib/index.js` — wiring (events, switching, resume)
 - `lib/catalog.js` — discovery and candidate ranking (pure logic)
 - `lib/util.js` — parsing, config normalization, error-code policy
-- `lib/config.js` — schemastery config (wrapped in `.volatile()`: DSH only renders settings controls for volatile fields, and edits then apply without a restart)
+- `lib/config.js` — schemastery config (wrapped in `.volatile()`; edits apply without a restart)
+- `lib/client.js` — web settings panel (registers `plugins.bundle.config`): master switch, model call order list (drag / add / remove / dropdown suggestions), provider priority, backed by `ConfigForms`
+- `lib/index.js` — read-only route `/smart-model-failover/plan`: hands the live failover plan and the models this profile's configured providers can list to the settings panel for its dropdowns
 
 ## License
 

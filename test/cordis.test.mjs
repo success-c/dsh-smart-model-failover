@@ -69,10 +69,21 @@ async function mount({ llm = catalog(), agents = {}, config = {}, log = tempLog(
   const root = new Context();
   root.provide("llm");
   root.provide("agents");
+  root.provide("webServer");
+  const registered = [];
   root.set("llm", llm);
   root.set("agents", agents);
+  root.set("webServer", {
+    register: (route) => {
+      registered.push(route);
+      return () => {
+        const index = registered.indexOf(route);
+        if (index >= 0) registered.splice(index, 1);
+      };
+    },
+  });
   const fiber = await root.plugin(plugin, config);
-  return { root, fiber, log };
+  return { root, fiber, log, registered };
 }
 
 function failurePayload(agent, provider, code = "SERVER") {
@@ -159,4 +170,44 @@ test("disposal removes every hook it registered", async () => {
   assert.equal(state.selects.length, 0);
   assert.equal(state.followups.length, 0);
   assert.equal(readKinds(log).length, kindsBefore, "nothing was logged after disposal");
+});
+
+test("serves the settings picker only the profile's discovered models", async () => {
+  const { fiber, registered } = await mount();
+  const route = registered.find((entry) => entry.path === "/smart-model-failover/plan");
+  assert.ok(route, "the settings page needs a read-only plan route");
+
+  const response = await route.resource();
+  assert.equal(response.headers.get("content-type"), "application/json; charset=utf-8");
+  const payload = await response.json();
+
+  assert.equal(payload.source, "auto");
+  assert.deepEqual(payload.routes, [
+    "huoshan/deepseek-v4-1-flash-260910",
+    "huoshanhong/deepseek-v4-1-flash-260910",
+    "workbuddy1/hy4flash-free",
+  ]);
+  const models = [
+    "huoshan/deepseek-v4-1-flash-260910",
+    "huoshanhong/deepseek-v4-1-flash-260910",
+    "workbuddy1/hy4flash-free",
+  ].sort((left, right) => left.localeCompare(right));
+  assert.deepEqual(payload.models, models, "the picker lists the catalog, not a market-wide list");
+  assert.ok(!("market" in payload));
+
+  await fiber.dispose();
+  assert.equal(registered.length, 0, "disposal unregisters the route");
+});
+
+test("the plan route keeps every discovered model when an order is pinned", async () => {
+  const { fiber, registered } = await mount({ config: { order: ["workbuddy1/hy4flash-free"] } });
+  const route = registered.find((entry) => entry.path === "/smart-model-failover/plan");
+  assert.ok(route);
+
+  const payload = await (await route.resource()).json();
+  assert.equal(payload.source, "configured");
+  assert.equal(payload.routes[0], "workbuddy1/hy4flash-free", "pinned order wins in the plan");
+  assert.equal(payload.models.length, 3, "the picker still offers all configured providers' models");
+
+  await fiber.dispose();
 });
