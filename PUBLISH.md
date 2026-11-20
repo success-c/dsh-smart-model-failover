@@ -34,7 +34,7 @@ npm pack --dry-run
 
 ```sh
 cd C:/Users/PC/.dsh/profiles/desktop
-node --input-type=module -e "import('file:///D:/project/dsh-smart-model-failover/lib/index.js').then(m => console.log(m.name, m.inject, typeof m.Config.toJSON))"
+node --input-type=module -e "import('file:///C:/Users/PC/Desktop/dsh-smart-model-failover/lib/index.js').then(m => console.log(m.name, m.inject, typeof m.Config.toJSON))"
 ```
 
 期望输出：`smart-model-failover [ 'agents', 'llm' ] function`。最后那个 `function` 就是「设置页会渲染出表单」的证据。
@@ -42,7 +42,7 @@ node --input-type=module -e "import('file:///D:/project/dsh-smart-model-failover
 ## 3. 建 GitHub 仓库
 
 ```sh
-cd D:/project/dsh-smart-model-failover
+cd C:/Users/PC/Desktop/dsh-smart-model-failover
 git init && git add . && git commit -m "feat: initial release"
 git branch -M main
 git remote add origin git@github.com:<you>/dsh-smart-model-failover.git
