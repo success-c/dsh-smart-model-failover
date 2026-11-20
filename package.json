@@ -46,14 +46,14 @@
       "patch": "./cordis.patch.yml"
     }
   },
-  "author": "your-github-name (https://github.com/your-github-name)",
+  "author": "success-c (https://github.com/success-c)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-github-name/dsh-smart-model-failover.git"
+    "url": "git+https://github.com/success-c/dsh-smart-model-failover.git"
   },
-  "homepage": "https://github.com/your-github-name/dsh-smart-model-failover#readme",
+  "homepage": "https://github.com/success-c/dsh-smart-model-failover#readme",
   "bugs": {
-    "url": "https://github.com/your-github-name/dsh-smart-model-failover/issues"
+    "url": "https://github.com/success-c/dsh-smart-model-failover/issues"
   },
   "license": "MIT",
   "publishConfig": {

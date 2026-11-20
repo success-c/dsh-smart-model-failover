@@ -13,8 +13,8 @@
 
 | 字段 | 现在 | 改成 |
 | --- | --- | --- |
-| `author` | `your-github-name (https://github.com/your-github-name)` | 你的名字 + 主页 |
-| `repository.url` | `git+https://github.com/your-github-name/dsh-smart-model-failover.git` | 你的真实仓库 |
+| `author` | `success-c (https://github.com/success-c)` | 你的名字 + 主页 |
+| `repository.url` | `git+https://github.com/success-c/dsh-smart-model-failover.git` | 你的真实仓库 |
 | `homepage` | 同上 | `https://github.com/<you>/dsh-smart-model-failover#readme` |
 | `bugs.url` | 同上 | `.../issues` |
 
