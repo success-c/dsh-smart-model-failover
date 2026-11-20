@@ -40,6 +40,16 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 
 安装后**重启 DSH**。插件作为 bundle 层自动挂进 profile（`dsh.bundle.patch`），无需手工改 `cordis.patch.yml`。
 
+## 在哪里设置
+
+![插件设置面板：总开关、模型调用顺序、厂商优先顺序](https://raw.githubusercontent.com/success-c/dsh-smart-model-failover/main/assets/settings-panel.png)
+
+1. 左侧菜单点「插件」，在已安装列表里点 `dsh-smart-model-failover`；
+2. 在插件详情页向下滚到设置表单——就是上图这块：**启用错误自动切换**（总开关）、**模型调用顺序**（默认直接展示自动发现的顺序，可拖动/新增/删除）、**厂商优先顺序**；
+3. 改完点「保存」，写入 profile 的 `cordis.patch.yml`，立即生效，不需要重启。
+
+从「插件市场」装完也是同一路径；Web 端和桌面端位置一致。表单在页面下方，紧跟在插件描述与版本信息之后。
+
 ## 配置
 
 全部字段都有默认值，留空即「纯自动发现」。

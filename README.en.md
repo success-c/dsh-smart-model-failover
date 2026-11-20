@@ -36,6 +36,16 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 
 The plugin ships a bundle patch (`dsh.bundle.patch`), so it mounts itself into the profile; no manual `cordis.patch.yml` edit is needed. Restart DSH afterwards.
 
+## Where to configure it
+
+![The plugin settings panel: master switch, model order, provider order](https://raw.githubusercontent.com/success-c/dsh-smart-model-failover/main/assets/settings-panel.png)
+
+1. Click **Plugins** in the left sidebar, then click `dsh-smart-model-failover` in the installed list;
+2. Scroll down the plugin page to the settings form shown above: **auto failover switch**, **model attempt order** (the discovered order is rendered directly; drag, add or delete rows), and **provider priority**;
+3. Press **Save**. It writes to the profile's `cordis.patch.yml` and takes effect immediately — no restart needed.
+
+The same path works for an install from the plugin marketplace, on both the Web and desktop apps. The form sits below the plugin description and version info.
+
 ## Configuration
 
 All fields have defaults; an empty config means "pure discovery".
