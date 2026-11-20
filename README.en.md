@@ -14,7 +14,7 @@ This plugin asks the host *what can run right now*, walks the providers **in the
 
 - **No list to maintain** — `order` defaults to empty; candidates come from `ctx.llm.listProviders()` + `listModels()`.
 - **Covers external connections** — any provider another plugin registers with the host joins the pool automatically; no per-plugin integration required.
-- **Provider by provider** — one candidate per provider (chosen by `modelPreference`), then the next vendor when it fails; no retry roulette inside one vendor.
+- **Provider by provider** — one candidate per provider (chosen by `modelPreference` and version), then the next vendor when it fails; no retry roulette inside one vendor.
 - **No repeated dead ends** — a route that already failed in this turn is never retried; failed routes cool down (10 min for ordinary errors, 24 h for credential/quota/retired-model codes).
 - **Two-stage, never fights the host** — calls `await next()` first so `llm-retry` and other owners keep priority.
 - **Does not touch session history** — switches are logged to a separate file; the host itself records the route change (`model/selection` + its `[model changed: ...]` notice).
@@ -45,7 +45,7 @@ All fields have defaults; an empty config means "pure discovery".
 | `enabled` | `true` | **Master switch**. Off means the plugin never takes over a failed request; saved settings apply without a restart |
 | `order` | `[]` | **Model call order** (`"provider/model"`, or a bare provider name). The settings panel shows the auto-discovered order by default and lets you drag / add / remove; listed entries are tried in that order; empty = the workspace's provider order, one model per provider |
 | `providerPriority` | `[]` | Provider order, e.g. `["vendorA","vendorB"]`; the settings panel lists this profile's configured providers in a dropdown; only affects providers `order` does not name |
-| `modelPreference` | `["flash","haiku","mini","lite"]` | Which model to pick per provider during discovery: earliest substring match wins |
+| `modelPreference` | `["deepseek"]` | Which model to pick per provider during discovery: earliest substring match wins (`deepseek` by default, so a switch stays in the same model family) |
 | `excludeProviders` | `[]` | Providers never used as a target |
 | `excludePatterns` | `["embed","rerank","moderation"]` | Model-id substrings never used as a target (case-insensitive) |
 | `cooldownMs` | `600000` | How long a failed route stays parked |
@@ -92,7 +92,7 @@ Candidate order:
 
 1. `order` entries, strictly in the listed order (a bare provider name resolves to that provider's `modelPreference` pick)
 2. the remaining providers, by `providerPriority` then by registration order (i.e. the workspace's provider order)
-3. **exactly one model per provider**: earliest `modelPreference` hit, then discovery order
+3. **exactly one model per provider**: first the `modelPreference` family (default `deepseek`), then the newest version within that family (`v4.1` before `v4`), then discovery order
 
 Skipped: routes already tried this turn, routes cooling down, `excludeProviders`, `excludePatterns`, the route that just failed, and **providers that already failed this turn** (one failure per vendor, then move on).
 
@@ -115,7 +115,7 @@ Cooldown is code-aware: errors that cannot heal by retrying (`AUTH`, `MISSING_CR
 Check the log for `loaded` (absent → the package was not mounted; restart and check `dsh plugin list`). If `loaded` is there but no `switch`, look for `skip-code` / `max-switches` / `exhausted`: usually the host's own retry already recovered the request, or the pool is empty (`discover-empty` means a provider listed no models — typically missing credentials).
 
 **It picked a model I have never heard of.**
-Each provider contributes exactly one model: the first one matching `modelPreference`. Pin a concrete model by writing `provider/model` in `order`, or keep only the vendor you want with `excludeProviders` / `providerPriority`.
+Each provider contributes exactly one model: a `modelPreference` family hit first, then the newest version within that family (`deepseek-v4.1` before `deepseek-v4`; a dated build suffix is not read as a version). Pin a concrete model by writing `provider/model` in `order`, or keep only the vendor you want with `excludeProviders` / `providerPriority`.
 
 **Does it fight `llm-retry`?**
 No — `await next()` first; it only steps in when nobody else owns recovery.

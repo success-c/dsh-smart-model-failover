@@ -16,7 +16,7 @@ DSH 自带的 `llm-retry` 只会对同一路由做退避重试：额度耗尽、
 
 - **零名单**：`order` 默认留空，候选完全来自 `ctx.llm.listProviders()` + `listModels()`。
 - **覆盖外部接入**：任何插件注册进宿主的 provider 都会自动进入候选池，无需为本插件单独适配。
-- **逐个厂商**：每个厂商只出一个候选（按 `modelPreference` 挑模型），失败就换下一家，不在一家厂商多点乱撞。
+- **逐个厂商**：每个厂商只出一个候选（按 `modelPreference` 与版本挑模型），失败就换下一家，不在一家厂商多点乱撞。
 - **不重复踩坑**：同一轮里失败过的路由不再尝试；失败路由按错误类型冷却（普通错误 10 分钟，密钥/额度/模型下线类 24 小时）。
 - **两个阶段，不抢主机的活**：先 `await next()` 让 `llm-retry` 等下游先决定；它们不接管时才自己做故障转移。
 - **不污染会话**：切换记录只写独立日志文件；续跑消息是一个带 `id`/`role` 的完整 user message，与宿主自身写入的 session v4 格式一致。路由变化本身由宿主记入 `model/selection` 并显示 `[model changed: ...]` 提示。
@@ -49,7 +49,7 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 | `enabled` | `true` | **总开关**。关掉后完全不接管请求失败；保存设置即生效，不需要重启 |
 | `order` | `[]` | **模型调用顺序**，`"provider/model"` 或只写厂商名。设置页默认展示自动发现的顺序，可拖动/新增；列出的按顺序先试；留空 = 按工作区已启用厂商的顺序，每个厂商只试一个模型 |
 | `providerPriority` | `[]` | 厂商优先顺序，如 `["vendorA","vendorB"]`；设置页下拉列出本 profile 已配置的厂商；只影响 `order` 没点名的厂商 |
-| `modelPreference` | `["flash","haiku","mini","lite"]` | 自动发现时，为每个厂商挑哪个模型：优先匹配靠前的子串 |
+| `modelPreference` | `["deepseek"]` | 自动发现时，为每个厂商挑哪个模型：优先匹配靠前的子串（默认 `deepseek`，让切换留在同一模型家族） |
 | `excludeProviders` | `[]` | 永不作为切换目标的厂商 |
 | `excludePatterns` | `["embed","rerank","moderation"]` | 永不作为切换目标的模型 id 子串（不区分大小写） |
 | `cooldownMs` | `600000` | 失败路由冷却时长（毫秒） |
@@ -94,7 +94,7 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 
 1. `order` 里列出的条目，严格按写的顺序（只写厂商名 → 用该厂商按 `modelPreference` 挑出的那个模型）
 2. 其余厂商按 `providerPriority`、再按宿主注册顺序（即工作区里的厂商顺序）
-3. **每个厂商只有一个候选模型**：按 `modelPreference` 命中最早者，其次发现顺序
+3. **每个厂商只有一个候选模型**：先看 `modelPreference`（默认 `deepseek`），同族内版本更高者优先（`v4.1` 先于 `v4`），再退回发现顺序
 
 被跳过：本轮已试过的路由、正在冷却的路由、`excludeProviders`、`excludePatterns`、正在失败的那条，以及**本轮已经失败过的厂商**（失败一次就换下一家，不再在同一厂商上换模型重试）。
 
@@ -130,7 +130,7 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 看日志文件是否出现 `loaded`。没有 → 包没被加载（确认重启、确认 `dsh plugin list` 里能看到）。有 `loaded` 但没有 `switch` → 看 `skip-code` / `max-switches` / `exhausted`：多数情况是失败后宿主自身的重试已经恢复（`llm-retry` 先接管），或候选池为空（`discover-empty` 说明某个厂商没列模型，通常是没配凭据）。
 
 **Q：为什么切到一个我没听过的模型？**
-每个厂商只挑一个模型，挑中的是这个厂商里最先命中 `modelPreference` 的模型。想固定到具体模型，就在 `order` 里写 `provider/model`；想只留某个厂商，用 `excludeProviders` 或把 `providerPriority` 只留它。
+每个厂商只挑一个模型：先命中 `modelPreference` 的家族，同族内取版本最高的（`deepseek-v4.1` 先于 `deepseek-v4`，打日期后缀的 build 不会被当成版本号）。想固定到具体模型，就在 `order` 里写 `provider/model`；想只留某个厂商，用 `excludeProviders` 或把 `providerPriority` 只留它。
 
 **Q：会和 `llm-retry` 打架吗？**
 不会。插件先 `await next()`，下游返回「我要重试」时直接让位；只有下游不接管才切换。

@@ -46,9 +46,40 @@ test("rankCandidates resolves a bare provider name to that provider's preferred 
 	const routes = rankCandidates([route("a/big-model"), route("a/flash-model"), route("b/one")], {
 		from: route("z/failed"),
 		order: [{ provider: "a" }],
-		config: cfg(),
+		config: cfg({ modelPreference: ["flash"] }),
 	});
 	assert.deepEqual(labels(routes), ["a/flash-model", "b/one"]);
+});
+
+test("rankCandidates prefers the same model family on another vendor, newest generation first", () => {
+	const routes = rankCandidates(
+		[route("a/glm-5-3-flash"), route("b/deepseek-v4-flash"), route("c/deepseek-v4-1-flash"), route("d/deepseek-v4-flash")],
+		{ from: route("z/gone"), config: cfg() },
+	);
+	// One model per vendor; the DeepSeek vendors come before the unrelated one,
+	// and v4.1 comes before v4. The tie keeps provider registration order.
+	assert.deepEqual(labels(routes), [
+		"c/deepseek-v4-1-flash",
+		"b/deepseek-v4-flash",
+		"d/deepseek-v4-flash",
+		"a/glm-5-3-flash",
+	]);
+});
+
+test("rankCandidates picks the newest version within one provider", () => {
+	const routes = rankCandidates(
+		[route("a/deepseek-v3-flash"), route("a/deepseek-v4-flash"), route("a/deepseek-v4-1-flash"), route("b/mimo-v2.5")],
+		{ from: route("z/gone"), config: cfg() },
+	);
+	assert.deepEqual(labels(routes), ["a/deepseek-v4-1-flash", "b/mimo-v2.5"]);
+});
+
+test("a dated build is not mistaken for a version", () => {
+	const routes = rankCandidates(
+		[route("a/deepseek-v4-flash-260425"), route("a/deepseek-v4-1-flash-260910")],
+		{ from: route("z/gone"), config: cfg() },
+	);
+	assert.deepEqual(labels(routes), ["a/deepseek-v4-1-flash-260910"]);
 });
 
 test("rankCandidates filters tried routes, cooling routes, exclusions and empty models", () => {
