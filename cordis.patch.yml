@@ -1,0 +1,20 @@
+# dsh-smart-model-failover bundle patch: one insert over the profile root.
+#
+# `dsh plugin --profile <profile> add dsh-smart-model-failover` joins this layer
+# to the profile's bundle stack automatically. Every field below can be
+# overridden from your profile's own cordis.patch.yml by patching the row by id
+# (last write wins):
+#
+#   - id: smart-model-failover
+#     config:
+#       providerPriority: [workbuddy1, huoshan]
+#       cooldownMs: 300000
+#
+# Leaving `chain` empty means: candidates come purely from live discovery — every
+# provider configured in this profile, plus every provider an external connect
+# plugin registers (WorkBuddy, Trae, Qoder, ...).
+- insert:
+    - id: smart-model-failover
+      name: dsh-smart-model-failover
+      config:
+        chain: []

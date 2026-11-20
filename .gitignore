@@ -1,0 +1,4 @@
+node_modules/
+*.log
+.switch.log
+.e2e/
