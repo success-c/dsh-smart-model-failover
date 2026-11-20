@@ -41,7 +41,7 @@ All fields have defaults; an empty config means "pure discovery".
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `enabled` | `true` | Master switch. Off means the plugin never takes over a failed request; takes effect immediately |
+| `enabled` | `true` | **Master switch**. Off means the plugin never takes over a failed request; saved settings apply without a restart |
 | `order` | `[]` | **Attempt order** (`"provider/model"`, or a bare provider name). Listed entries are tried in that order; empty = the workspace's provider order, one model per provider |
 | `providerPriority` | `[]` | Provider order, e.g. `["workbuddy1","huoshan"]`; only affects providers `order` does not name |
 | `modelPreference` | `["flash","haiku","mini","lite"]` | Which model to pick per provider during discovery: earliest substring match wins |

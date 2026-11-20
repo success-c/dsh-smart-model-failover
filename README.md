@@ -45,7 +45,7 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 
 | 字段 | 默认 | 说明 |
 | --- | --- | --- |
-| `enabled` | `true` | 总开关。关掉后完全不接管请求失败（立即生效，不需要恢复默认配置） |
+| `enabled` | `true` | **总开关**。关掉后完全不接管请求失败；保存设置即生效，不需要重启 |
 | `order` | `[]` | **尝试调用模型的顺序**，`"provider/model"` 或只写厂商名。列出的按顺序先试；留空 = 按工作区已启用厂商的顺序，每个厂商只试一个模型 |
 | `providerPriority` | `[]` | 厂商优先顺序，如 `["workbuddy1","huoshan"]`；只影响 `order` 没点名的厂商 |
 | `modelPreference` | `["flash","haiku","mini","lite"]` | 自动发现时，为每个厂商挑哪个模型：优先匹配靠前的子串 |
