@@ -2,7 +2,7 @@
 
 > DeepSeek Harness（DSH）插件：模型请求失败时，**自动切换到下一个可用模型并续跑被打断的那一轮**。
 >
-> 候选池不是写死的一份名单，而是运行时从宿主发现的「本 profile 里所有已配置厂商 + 所有外部接入（WorkBuddy / Trae / Qoder 等）」的全部模型。
+> 候选池不是写死的一份名单，而是运行时从宿主发现的「本 profile 里所有已配置厂商 + 其他插件注册进宿主的厂商」的全部模型。
 
 ## 为什么需要
 
@@ -15,7 +15,7 @@ DSH 自带的 `llm-retry` 只会对同一路由做退避重试：额度耗尽、
 ## 特性
 
 - **零名单**：`order` 默认留空，候选完全来自 `ctx.llm.listProviders()` + `listModels()`。
-- **覆盖外部接入**：任何插件（如 `dsh-workbuddy-trae-qoder-connect`）注册进宿主的 provider 都会自动进入候选池。
+- **覆盖外部接入**：任何插件注册进宿主的 provider 都会自动进入候选池，无需为本插件单独适配。
 - **逐个厂商**：每个厂商只出一个候选（按 `modelPreference` 挑模型），失败就换下一家，不在一家厂商多点乱撞。
 - **不重复踩坑**：同一轮里失败过的路由不再尝试；失败路由按错误类型冷却（普通错误 10 分钟，密钥/额度/模型下线类 24 小时）。
 - **两个阶段，不抢主机的活**：先 `await next()` 让 `llm-retry` 等下游先决定；它们不接管时才自己做故障转移。
@@ -47,7 +47,7 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 | --- | --- | --- |
 | `enabled` | `true` | **总开关**。关掉后完全不接管请求失败；保存设置即生效，不需要重启 |
 | `order` | `[]` | **尝试调用模型的顺序**，`"provider/model"` 或只写厂商名。列出的按顺序先试；留空 = 按工作区已启用厂商的顺序，每个厂商只试一个模型 |
-| `providerPriority` | `[]` | 厂商优先顺序，如 `["workbuddy1","huoshan"]`；只影响 `order` 没点名的厂商 |
+| `providerPriority` | `[]` | 厂商优先顺序，如 `["vendorA","vendorB"]`；只影响 `order` 没点名的厂商 |
 | `modelPreference` | `["flash","haiku","mini","lite"]` | 自动发现时，为每个厂商挑哪个模型：优先匹配靠前的子串 |
 | `excludeProviders` | `[]` | 永不作为切换目标的厂商 |
 | `excludePatterns` | `["embed","rerank","moderation"]` | 永不作为切换目标的模型 id 子串（不区分大小写） |
@@ -69,7 +69,7 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 ```yaml
 - id: smart-model-failover
   config:
-    providerPriority: ["workbuddy1", "huoshan", "meng"]
+    providerPriority: ["vendorA", "vendorB"]
     maxSwitches: 5
     excludePatterns: ["embed", "rerank", "moderation", "vision"]
 ```
@@ -104,8 +104,8 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 默认 `$DSH_HOME/smart-model-failover.log`（`DSH_HOME` 未设置时为 `~/.dsh`），可用环境变量 `SMART_MODEL_FAILOVER_LOG` 覆盖。JSON lines：
 
 ```json
-{"kind":"switch","from":"huoshan/deepseek-v4-1-flash-260910","to":"meng/mimo-v2.5","code":"RATE_LIMIT","episode":1,"candidates":6}
-{"kind":"resume-sent","to":"meng/mimo-v2.5","code":"RATE_LIMIT"}
+{"kind":"switch","from":"vendorA/some-model","to":"vendorB/another-model","code":"RATE_LIMIT","episode":1,"candidates":6}
+{"kind":"resume-sent","to":"vendorB/another-model","code":"RATE_LIMIT"}
 ```
 
 `kind` 取值：

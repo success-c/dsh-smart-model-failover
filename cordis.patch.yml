@@ -7,12 +7,12 @@
 #
 #   - id: smart-model-failover
 #     config:
-#       providerPriority: [workbuddy1, huoshan]
+#       providerPriority: [vendorA, vendorB]
 #       cooldownMs: 300000
 #
 # Leaving `order` empty means: candidates come purely from live discovery — every
-# provider configured in this profile, plus every provider an external connect
-# plugin registers (WorkBuddy, Trae, Qoder, ...).
+# provider configured in this profile, plus every provider another plugin
+# registers with the host.
 - insert:
     - id: smart-model-failover
       name: dsh-smart-model-failover

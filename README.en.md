@@ -2,7 +2,7 @@
 
 > DeepSeek Harness (DSH) plugin: when a model request fails, automatically switch to the next usable model and **re-drive the interrupted turn**.
 >
-> The candidate pool is not a hard-coded list. It is discovered at runtime from the host: every provider configured in the profile, plus every externally connected provider (WorkBuddy, Trae, Qoder, ...) — and every model each of them can list.
+> The candidate pool is not a hard-coded list. It is discovered at runtime from the host: every provider configured in the profile, plus every provider another plugin registers with the host — and every model each of them can list.
 
 ## Why
 
@@ -13,7 +13,7 @@ This plugin asks the host *what can run right now*, walks the providers **in the
 ## Features
 
 - **No list to maintain** — `order` defaults to empty; candidates come from `ctx.llm.listProviders()` + `listModels()`.
-- **Covers external connections** — any provider registered by another plugin (e.g. `dsh-workbuddy-trae-qoder-connect`) joins the pool automatically.
+- **Covers external connections** — any provider another plugin registers with the host joins the pool automatically; no per-plugin integration required.
 - **Provider by provider** — one candidate per provider (chosen by `modelPreference`), then the next vendor when it fails; no retry roulette inside one vendor.
 - **No repeated dead ends** — a route that already failed in this turn is never retried; failed routes cool down (10 min for ordinary errors, 24 h for credential/quota/retired-model codes).
 - **Two-stage, never fights the host** — calls `await next()` first so `llm-retry` and other owners keep priority.
@@ -43,7 +43,7 @@ All fields have defaults; an empty config means "pure discovery".
 | --- | --- | --- |
 | `enabled` | `true` | **Master switch**. Off means the plugin never takes over a failed request; saved settings apply without a restart |
 | `order` | `[]` | **Attempt order** (`"provider/model"`, or a bare provider name). Listed entries are tried in that order; empty = the workspace's provider order, one model per provider |
-| `providerPriority` | `[]` | Provider order, e.g. `["workbuddy1","huoshan"]`; only affects providers `order` does not name |
+| `providerPriority` | `[]` | Provider order, e.g. `["vendorA","vendorB"]`; only affects providers `order` does not name |
 | `modelPreference` | `["flash","haiku","mini","lite"]` | Which model to pick per provider during discovery: earliest substring match wins |
 | `excludeProviders` | `[]` | Providers never used as a target |
 | `excludePatterns` | `["embed","rerank","moderation"]` | Model-id substrings never used as a target (case-insensitive) |
@@ -67,7 +67,7 @@ Override any field from the profile's own `cordis.patch.yml`, by row id:
 ```yaml
 - id: smart-model-failover
   config:
-    providerPriority: ["workbuddy1", "huoshan", "meng"]
+    providerPriority: ["vendorA", "vendorB"]
     maxSwitches: 5
     promptTemplate: "[failover] {from} failed ({code}); continuing on {to}. Resume the interrupted work."
 ```
@@ -102,8 +102,8 @@ Cooldown is code-aware: errors that cannot heal by retrying (`AUTH`, `MISSING_CR
 `$DSH_HOME/smart-model-failover.log` (`~/.dsh` when `DSH_HOME` is unset), or `SMART_MODEL_FAILOVER_LOG`. JSON lines:
 
 ```json
-{"kind":"switch","from":"huoshan/deepseek-v4-1-flash-260910","to":"meng/mimo-v2.5","code":"RATE_LIMIT","episode":1,"candidates":6}
-{"kind":"resume-sent","to":"meng/mimo-v2.5","code":"RATE_LIMIT"}
+{"kind":"switch","from":"vendorA/some-model","to":"vendorB/another-model","code":"RATE_LIMIT","episode":1,"candidates":6}
+{"kind":"resume-sent","to":"vendorB/another-model","code":"RATE_LIMIT"}
 ```
 
 `kind`: `loaded`, `discovered`, `discover-empty`, `discover-failed`, `cache-invalidated`, `switch`, `resume-sent`, `resume-failed`, `max-switches`, `exhausted`, `select-failed`, `select-not-applied`, `config-updated`, `skip-code`.

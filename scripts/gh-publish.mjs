@@ -58,7 +58,7 @@ const created = await api("/user/repos", {
 	body: JSON.stringify({
 		name: REPO,
 		description:
-			"DSH plugin: when a model request fails, switch to the next routable model discovered from every configured provider (and every externally connected one, e.g. WorkBuddy), then resume the interrupted turn.",
+			"DSH plugin: when a model request fails, switch to the next routable model discovered from every configured provider (including providers added by other plugins), then resume the interrupted turn.",
 		homepage: `https://github.com/${owner}/${REPO}`,
 		private: false,
 		has_issues: true,
@@ -126,7 +126,7 @@ const pull = await api(`/repos/${UPSTREAM}/pulls`, {
 		body: [
 			`Adds \`${owner}/${REPO}\` under \`model\`.`,
 			"",
-			"**What it does** — listens to `agent/request-error`, discovers the models of every provider registered with `ctx.llm` (including externally connected ones such as WorkBuddy), switches the agent's route with `agent.model.select()`, and resumes the interrupted turn with `agent.followup()` once the agent is idle. Attempt order, per-provider priority, cooldowns and a master switch are configurable through the settings form; the attempt order falls back to the providers' registration order with one model per provider.",
+			"**What it does** — listens to `agent/request-error`, discovers the models of every provider registered with `ctx.llm` (including providers added by other plugins), switches the agent's route with `agent.model.select()`, and resumes the interrupted turn with `agent.followup()` once the agent is idle. Attempt order, per-provider priority, cooldowns and a master switch are configurable through the settings form; the attempt order falls back to the providers' registration order with one model per provider.",
 			"",
 			"**npm** — `dsh-smart-model-failover@0.1.0`, `repository` points here, `@deepseek-ai/schemastery` is a `peerDependency`.",
 			"**Repo age** — created today; the 1-day gate should clear on its own.",
