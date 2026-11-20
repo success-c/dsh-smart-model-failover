@@ -6,7 +6,7 @@
 
 | 项 | 值 |
 | --- | --- |
-| npm | `dsh-smart-model-failover@0.1.0` 已发布、`latest` 指向它，并已从 registry 装回临时目录验证可正常 import |
+| npm | `dsh-smart-model-failover@0.2.0` 已发布、`latest` 指向它（0.1.0 仍可安装）；0.2.0 修复了自动续跑消息缺少 `id`/`role` 导致会话日志被判 corrupt 的问题 |
 | 仓库 | https://github.com/success-c/dsh-smart-model-failover（public，topics 含 `dsh-plugin`） |
 | 收录 PR | https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/17165（只加 1 个文件 `data/plugins/success-c__dsh-smart-model-failover.yml`） |
 | 待过门槛 | 精选列表 CI 要求仓库创建满 1 天；今天刚建库，CI 的 age 项会自动重跑通过，**不需要推空提交** |
@@ -20,6 +20,9 @@
   先在 https://www.npmjs.com/settings/~/profile 开启 Authenticator app，或用带 Bypass 2FA 的 Granular token。
 - **新包名首发会先出现 `0.0.0-stage` 占位**（npm 的 staged publishing）。`npm publish` 报成功但
   `npm view <pkg> version` 仍显示 `0.0.0-stage`，等 1-3 分钟真实版本才可见；别在这个窗口里误判发布失败、急着换包名。
+- **0.2.0（2026-11-20）**：自动切换后的续跑消息改为带 `id`（UUID）与 `role: "user"`。宿主把 `agent.followup()`
+  的入参原样持久化为 `user/message`，缺这两个字段会让整个会话在重新打开时报
+  `lacks an identified message`；旧版已经写坏的会话需要按同字段单独修复。
 
 包名 `dsh-smart-model-failover` 在 npm 上已确认未被占用。npm 上已有的 `dsh-model-failover` 是别人维护的**静态 fallbacks 熔断器**，
 两者行为不同：本插件在运行时从 `ctx.llm` 动态发现**所有**已配置 + 外部接入厂商的模型，不依赖手写链。
@@ -79,8 +82,11 @@ git push -u origin main
 
 ```sh
 npm login          # 需要开启 2FA 的账号
-npm publish        # 会先跑 prepublishOnly 自检
+npm publish        # publishConfig.registry 已指向 npmjs，无需再带 --registry
 ```
+
+token 存在 `~/.npmrc` 的 `//registry.npmjs.org/:_authToken`，只作用于 npmjs；
+日常 `npm install` 仍走 npmmirror，两者互不影响。0.2.0 之后 `npm publish` 不再需要 `--registry` 参数。
 
 发布后确认元数据已挂上仓库：
 
@@ -144,7 +150,7 @@ dsh plugin --profile web add dsh-smart-model-failover
 ## 8. 撤回
 
 72 小时内可以 `npm unpublish dsh-smart-model-failover --force`；超过 72 小时只能
-`npm deprecate dsh-smart-model-failover@0.1.0 "reason"`，已装用户不会被自动卸载。
+`npm deprecate dsh-smart-model-failover@0.2.0 "reason"`，已装用户不会被自动卸载。
 精选列表的条目可以再提一个 PR 删掉。
 
 ---
