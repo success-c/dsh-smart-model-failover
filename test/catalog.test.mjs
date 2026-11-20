@@ -10,53 +10,45 @@ function cfg(overrides = {}) {
 const route = (spec) => parseRoute(spec);
 const labels = (routes) => routes.map((item) => `${item.provider}/${item.model}`);
 
-test("rankCandidates puts chain routes first even before they are discovered", () => {
-	const routes = rankCandidates([route("a/m-flash")], {
+test("rankCandidates walks the explicit attempt order first", () => {
+	const routes = rankCandidates([route("a/m-flash"), route("b/other")], {
 		from: route("z/failed"),
-		failedProvider: "z",
-		chain: [route("b/pinned-model")],
+		order: [route("b/pinned-model")],
 		config: cfg(),
 	});
+	// b is listed first and therefore already used for this episode.
 	assert.deepEqual(labels(routes), ["b/pinned-model", "a/m-flash"]);
 });
 
-test("rankCandidates skips the failing route and prefers another provider with the same model", () => {
-	const routes = rankCandidates([route("a/other"), route("b/same"), route("c/same")], {
+test("rankCandidates tries one model per provider and skips the vendor that just failed", () => {
+	const routes = rankCandidates([route("a/same"), route("a/other"), route("b/one"), route("c/one")], {
 		from: route("a/same"),
-		failedProvider: "a",
-		chain: [],
 		config: cfg(),
 	});
-	assert.deepEqual(labels(routes), ["b/same", "c/same", "a/other"]);
+	assert.deepEqual(labels(routes), ["b/one", "c/one"]);
 });
 
-test("rankCandidates falls back to providerPriority and modelPreference", () => {
+test("rankCandidates orders providers by providerPriority then registration, and picks by modelPreference", () => {
 	const routes = rankCandidates([route("b/big-model"), route("c/small-model"), route("b/flash-model")], {
 		from: route("a/gone"),
-		failedProvider: "a",
-		chain: [],
 		config: cfg({ providerPriority: ["c"], modelPreference: ["flash"] }),
 	});
-	// c is preferred by providerPriority; within b, the flash model wins.
-	assert.deepEqual(labels(routes), ["c/small-model", "b/flash-model", "b/big-model"]);
+	assert.deepEqual(labels(routes), ["c/small-model", "b/flash-model"]);
+
+	const discovered = rankCandidates([route("b/big-model"), route("c/small-model"), route("b/flash-model")], {
+		from: route("a/gone"),
+		config: cfg({ modelPreference: ["flash"] }),
+	});
+	assert.deepEqual(labels(discovered), ["b/flash-model", "c/small-model"]);
 });
 
-test("rankCandidates honors preferSameModel before providerPriority", () => {
-	const routes = rankCandidates([route("b/same"), route("c/other")], {
-		from: route("a/same"),
-		failedProvider: "a",
-		chain: [],
-		config: cfg({ providerPriority: ["c", "b"] }),
+test("rankCandidates resolves a bare provider name to that provider's preferred model", () => {
+	const routes = rankCandidates([route("a/big-model"), route("a/flash-model"), route("b/one")], {
+		from: route("z/failed"),
+		order: [{ provider: "a" }],
+		config: cfg(),
 	});
-	assert.deepEqual(labels(routes), ["b/same", "c/other"]);
-
-	const withoutBonus = rankCandidates([route("b/same"), route("c/other")], {
-		from: route("a/same"),
-		failedProvider: "a",
-		chain: [],
-		config: cfg({ providerPriority: ["c", "b"], preferSameModel: false }),
-	});
-	assert.deepEqual(labels(withoutBonus), ["c/other", "b/same"]);
+	assert.deepEqual(labels(routes), ["a/flash-model", "b/one"]);
 });
 
 test("rankCandidates filters tried routes, cooling routes, exclusions and empty models", () => {
@@ -64,13 +56,11 @@ test("rankCandidates filters tried routes, cooling routes, exclusions and empty 
 	const cooling = new Map([["b/cold", now + 5000]]);
 	const routes = rankCandidates([route("a/live"), route("b/cold"), route("c/tried"), route("d/embed-large"), route("e/"), route("f/ok")], {
 		from: route("main/failed"),
-		failedProvider: "main",
 		tried: new Set(["c/tried"]),
 		isCooling: (label) => {
 			const until = cooling.get(label);
 			return until !== undefined && until > now;
 		},
-		chain: [],
 		config: cfg({ excludeProviders: ["e"] }),
 		now,
 	});
@@ -80,8 +70,6 @@ test("rankCandidates filters tried routes, cooling routes, exclusions and empty 
 test("rankCandidates returns an empty list when nothing is routable", () => {
 	const routes = rankCandidates([route("a/same")], {
 		from: route("a/same"),
-		failedProvider: "a",
-		chain: [route("a/same")],
 		config: cfg(),
 	});
 	assert.deepEqual(routes, []);

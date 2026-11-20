@@ -34,7 +34,7 @@ test("routeLabel renders provider/model and degrades safely", () => {
 test("normalizeConfig falls back to defaults for empty input", () => {
 	const cfg = normalizeConfig({});
 	assert.equal(cfg.enabled, DEFAULTS.enabled);
-	assert.deepEqual(cfg.chain, []);
+	assert.deepEqual(cfg.order, []);
 	assert.equal(cfg.cooldownMs, DEFAULTS.cooldownMs);
 	assert.equal(cfg.maxSwitches, DEFAULTS.maxSwitches);
 	assert.equal(cfg.promptTemplate, DEFAULTS.promptTemplate);
@@ -43,7 +43,7 @@ test("normalizeConfig falls back to defaults for empty input", () => {
 
 test("normalizeConfig accepts wild input without throwing", () => {
 	const cfg = normalizeConfig({
-		chain: ["huoshan/m1", "broken", "meng/mimo-v2.5"],
+		order: ["huoshan/m1", "huoshan/", "meng/mimo-v2.5", "workbuddy1"],
 		cooldownMs: -5,
 		maxSwitches: 2.9,
 		providerPriority: ["meng", 7, ""],
@@ -51,10 +51,13 @@ test("normalizeConfig accepts wild input without throwing", () => {
 		promptTemplate: "   ",
 		enabled: "yes",
 	});
-	assert.deepEqual(cfg.chain, [
+	assert.deepEqual(cfg.order, [
 		{ provider: "huoshan", model: "m1" },
 		{ provider: "meng", model: "mimo-v2.5" },
+		{ provider: "workbuddy1" },
 	]);
+	// The pre-0.2 name still works.
+	assert.deepEqual(normalizeConfig({ chain: ["meng/b"] }).order, [{ provider: "meng", model: "b" }]);
 	assert.equal(cfg.cooldownMs, DEFAULTS.cooldownMs);
 	assert.equal(cfg.maxSwitches, 2);
 	assert.deepEqual(cfg.providerPriority, ["meng"]);
@@ -69,9 +72,9 @@ test("formatPrompt substitutes every placeholder occurrence", () => {
 	assert.equal(text, "a/m1 -> b/m2 (RATE_LIMIT) / a/m1");
 });
 
-test("withTimeout resolves values, swallows rejections, and gives up on hangs", async () => {
+test("withTimeout resolves values, propagates rejections, and gives up on hangs", async () => {
 	assert.equal(await withTimeout(Promise.resolve(7), 1000), 7);
-	assert.equal(await withTimeout(Promise.reject(new Error("boom")), 1000), undefined);
+	await assert.rejects(withTimeout(Promise.reject(new Error("boom")), 1000), /boom/);
 	assert.equal(await withTimeout(new Promise(() => {}), 25), undefined);
 });
 

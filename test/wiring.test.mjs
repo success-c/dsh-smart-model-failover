@@ -229,7 +229,45 @@ test("resume=false switches without re-driving the turn", async () => {
 	harness.dispose();
 });
 
-test("respects excludeProviders, chain and providerPriority", async () => {
+test("does nothing while the master switch is off", async () => {
+	const harness = makeHarness({
+		providers: ["huoshan", "meng"],
+		models: { huoshan: [{ id: "a" }], meng: [{ id: "b" }] },
+	});
+	harness.start({ enabled: false });
+	const agent = makeAgent({ provider: "huoshan", model: "a" });
+
+	const downstream = await harness.requestError(failure(agent), async () => ({ kind: "retry" }));
+	assert.deepEqual(downstream, { kind: "retry" }, "the rest of the chain still decides");
+	assert.deepEqual(agent.model.current(), { provider: "huoshan", model: "a" });
+	assert.equal(agent.followups.length, 0);
+	assert.equal(harness.records().some((record) => record.kind === "switch"), false);
+	harness.dispose();
+});
+
+test("walks provider by provider with one model each", async () => {
+	const harness = makeHarness({
+		providers: ["a", "b", "c"],
+		models: { a: [{ id: "a1" }, { id: "a2" }], b: [{ id: "b1" }], c: [{ id: "c1" }] },
+	});
+	harness.start();
+	const agent = makeAgent({ provider: "a", model: "a1" });
+
+	await harness.requestError(failure(agent));
+	// a has a second model, but one failure per vendor is enough: move to b.
+	assert.deepEqual(agent.model.current(), { provider: "b", model: "b1" });
+
+	await harness.requestError(failure(agent));
+	assert.deepEqual(agent.model.current(), { provider: "c", model: "c1" });
+
+	await harness.requestError(failure(agent));
+	// Nothing left, a and b are not reused within the same episode.
+	assert.deepEqual(agent.model.current(), { provider: "c", model: "c1" });
+	assert.equal(harness.records().some((record) => record.kind === "exhausted"), true);
+	harness.dispose();
+});
+
+test("respects excludeProviders and providerPriority", async () => {
 	const harness = makeHarness({
 		providers: ["huoshan", "meng", "workbuddy1"],
 		models: {
@@ -250,12 +288,12 @@ test("respects excludeProviders, chain and providerPriority", async () => {
 	harness.dispose();
 });
 
-test("picks a configured chain route before a discovered one", async () => {
+test("picks a configured order route before a discovered one", async () => {
 	const harness = makeHarness({
 		providers: ["huoshan", "meng"],
 		models: { huoshan: [{ id: "a" }], meng: [{ id: "b" }] },
 	});
-	harness.start({ chain: ["meng/b"] });
+	harness.start({ order: ["meng/b"] });
 	const agent = makeAgent({ provider: "huoshan", model: "a" });
 
 	await harness.requestError(failure(agent));
@@ -280,6 +318,8 @@ test("invalidates the catalog when the host announces new adapters", async () =>
 	const agent = makeAgent({ provider: "huoshan", model: "m0" });
 	await harness.requestError(failure(agent));
 	assert.equal(discoveries, 1);
-	assert.deepEqual(agent.model.current(), { provider: "huoshan", model: "m1" });
+	// With a single provider there is nowhere to switch to, but discovery did rerun.
+	assert.deepEqual(agent.model.current(), { provider: "huoshan", model: "m0" });
+	assert.equal(harness.records().some((record) => record.kind === "exhausted"), true);
 	harness.dispose();
 });

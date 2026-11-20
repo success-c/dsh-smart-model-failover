@@ -10,11 +10,11 @@
 #       providerPriority: [workbuddy1, huoshan]
 #       cooldownMs: 300000
 #
-# Leaving `chain` empty means: candidates come purely from live discovery — every
+# Leaving `order` empty means: candidates come purely from live discovery — every
 # provider configured in this profile, plus every provider an external connect
 # plugin registers (WorkBuddy, Trae, Qoder, ...).
 - insert:
     - id: smart-model-failover
       name: dsh-smart-model-failover
       config:
-        chain: []
+        order: []

@@ -6,15 +6,15 @@
 
 ## Why
 
-DSH's built-in `llm-retry` only backs off and retries the *same* route. When a quota runs out, a credential dies, a model is retired, or a whole provider goes down, it exhausts its retries and the work in that turn is lost. A hand-written static `chain` helps for a while, but every new provider or model means editing config — and externally connected models never make it into the list at all.
+DSH's built-in `llm-retry` only backs off and retries the *same* route. When a quota runs out, a credential dies, a model is retired, or a whole provider goes down, it exhausts its retries and the work in that turn is lost. A hand-written static list helps for a while, but every new provider or model means editing config — and externally connected models never make it into the list at all.
 
-This plugin asks the host *what can run right now*, picks the next route from the live catalog, switches, and continues.
+This plugin asks the host *what can run right now*, walks the providers **in the order the workspace has them**, tries **one model per provider**, switches when that one fails, and continues. Pin the order in settings when you want it fixed.
 
 ## Features
 
-- **No list to maintain** — `chain` defaults to empty; candidates come from `ctx.llm.listProviders()` + `listModels()`.
+- **No list to maintain** — `order` defaults to empty; candidates come from `ctx.llm.listProviders()` + `listModels()`.
 - **Covers external connections** — any provider registered by another plugin (e.g. `dsh-workbuddy-trae-qoder-connect`) joins the pool automatically.
-- **Least behavioural change** — prefers the *same model id on another provider* before switching model family.
+- **Provider by provider** — one candidate per provider (chosen by `modelPreference`), then the next vendor when it fails; no retry roulette inside one vendor.
 - **No repeated dead ends** — a route that already failed in this turn is never retried; failed routes cool down (10 min for ordinary errors, 24 h for credential/quota/retired-model codes).
 - **Two-stage, never fights the host** — calls `await next()` first so `llm-retry` and other owners keep priority.
 - **Does not touch session history** — switches are logged to a separate file; the host itself records the route change (`model/selection` + its `[model changed: ...]` notice).
@@ -41,10 +41,10 @@ All fields have defaults; an empty config means "pure discovery".
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `enabled` | `true` | Master switch |
-| `chain` | `[]` | Preferred routes (`"provider/model"`), always ranked before discovered ones; empty = fully automatic |
-| `providerPriority` | `[]` | Provider order, e.g. `["workbuddy1","huoshan"]` |
-| `modelPreference` | `["flash","haiku","mini","lite"]` | Id substrings preferred when no cross-provider copy of the failed model exists |
+| `enabled` | `true` | Master switch. Off means the plugin never takes over a failed request; takes effect immediately |
+| `order` | `[]` | **Attempt order** (`"provider/model"`, or a bare provider name). Listed entries are tried in that order; empty = the workspace's provider order, one model per provider |
+| `providerPriority` | `[]` | Provider order, e.g. `["workbuddy1","huoshan"]`; only affects providers `order` does not name |
+| `modelPreference` | `["flash","haiku","mini","lite"]` | Which model to pick per provider during discovery: earliest substring match wins |
 | `excludeProviders` | `[]` | Providers never used as a target |
 | `excludePatterns` | `["embed","rerank","moderation"]` | Model-id substrings never used as a target (case-insensitive) |
 | `cooldownMs` | `600000` | How long a failed route stays parked |
@@ -52,7 +52,6 @@ All fields have defaults; an empty config means "pure discovery".
 | `resume` | `true` | Re-drive the interrupted turn after a switch |
 | `discoverTtlMs` | `300000` | Model catalog cache TTL |
 | `discoverTimeoutMs` | `3000` | Per-provider model listing timeout |
-| `preferSameModel` | `true` | Prefer the same model id on another provider |
 | `promptTemplate` | see below | Resume message template; `{from}`, `{to}`, `{code}` are substituted |
 
 Default resume message:
@@ -88,16 +87,13 @@ request fails
         └─ return undefined so the host closes this turn → re-drive it with agent.followup() once idle
 ```
 
-Ranking keys, in order:
+Candidate order:
 
-1. position in `chain`
-2. **different provider than the one that failed**
-3. **same model id** (`preferSameModel`)
-4. position in `providerPriority`
-5. earliest `modelPreference` match
-6. discovery order
+1. `order` entries, strictly in the listed order (a bare provider name resolves to that provider's `modelPreference` pick)
+2. the remaining providers, by `providerPriority` then by registration order (i.e. the workspace's provider order)
+3. **exactly one model per provider**: earliest `modelPreference` hit, then discovery order
 
-Filtered out: already tried this turn, cooling down, `excludeProviders`, `excludePatterns`, and the route that just failed.
+Skipped: routes already tried this turn, routes cooling down, `excludeProviders`, `excludePatterns`, the route that just failed, and **providers that already failed this turn** (one failure per vendor, then move on).
 
 Cooldown is code-aware: errors that cannot heal by retrying (`AUTH`, `MISSING_CREDENTIAL`, `ACCOUNT_QUOTA`, `ACCOUNT_TOKEN_INVALID`, `UNKNOWN_MODEL`, `MODEL_UNSUPPORTED`, `NO_ADAPTER`, ...) park the route for 24 hours; anything else uses `cooldownMs`.
 
@@ -118,7 +114,7 @@ Cooldown is code-aware: errors that cannot heal by retrying (`AUTH`, `MISSING_CR
 Check the log for `loaded` (absent → the package was not mounted; restart and check `dsh plugin list`). If `loaded` is there but no `switch`, look for `skip-code` / `max-switches` / `exhausted`: usually the host's own retry already recovered the request, or the pool is empty (`discover-empty` means a provider listed no models — typically missing credentials).
 
 **It picked a model I have never heard of.**
-That provider had no copy of the failed model. Narrow the pool with `modelPreference`, `providerPriority`, `excludePatterns`, or name routes explicitly in `chain`.
+Each provider contributes exactly one model: the first one matching `modelPreference`. Pin a concrete model by writing `provider/model` in `order`, or keep only the vendor you want with `excludeProviders` / `providerPriority`.
 
 **Does it fight `llm-retry`?**
 No — `await next()` first; it only steps in when nobody else owns recovery.
