@@ -2,6 +2,25 @@
 
 这份文档只给维护者看：它不会被 `npm pack` 打进 tarball（`files` 里没有它）。
 
+## 0. 当前状态（2026-11-20）
+
+| 项 | 值 |
+| --- | --- |
+| npm | `dsh-smart-model-failover@0.1.0` 已发布、`latest` 指向它，并已从 registry 装回临时目录验证可正常 import |
+| 仓库 | https://github.com/success-c/dsh-smart-model-failover（public，topics 含 `dsh-plugin`） |
+| 收录 PR | https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/17165（只加 1 个文件 `data/plugins/success-c__dsh-smart-model-failover.yml`） |
+| 待过门槛 | 精选列表 CI 要求仓库创建满 1 天；今天刚建库，CI 的 age 项会自动重跑通过，**不需要推空提交** |
+
+下面第 1-5 节保留为完整流程记录，方便以后发新版本或换账号时照做。
+
+两条实际踩过的坑（文档其它地方没写）：
+
+- **npm 现在对发布强制 2FA**：账号 `two-factor auth = disabled` 时，任何 token / 终端命令都会报
+  `403 Two-factor authentication or granular access token with bypass 2fa enabled is required to publish packages`。
+  先在 https://www.npmjs.com/settings/~/profile 开启 Authenticator app，或用带 Bypass 2FA 的 Granular token。
+- **新包名首发会先出现 `0.0.0-stage` 占位**（npm 的 staged publishing）。`npm publish` 报成功但
+  `npm view <pkg> version` 仍显示 `0.0.0-stage`，等 1-3 分钟真实版本才可见；别在这个窗口里误判发布失败、急着换包名。
+
 包名 `dsh-smart-model-failover` 在 npm 上已确认未被占用。npm 上已有的 `dsh-model-failover` 是别人维护的**静态 fallbacks 熔断器**，
 两者行为不同：本插件在运行时从 `ctx.llm` 动态发现**所有**已配置 + 外部接入厂商的模型，不依赖手写链。
 
@@ -24,11 +43,11 @@
 
 ```sh
 npm install
-npm test          # 28 个测试，应全绿
+npm test          # 34 个测试，应全绿
 npm pack --dry-run
 ```
 
-`npm pack --dry-run` 应看到 11 个文件：`lib/` 5 个、`cordis.patch.yml`、两个 README、`LICENSE`、`package.json`。
+`npm pack --dry-run` 应看到 10 个文件：`lib/` 5 个、`cordis.patch.yml`、两个 README、`LICENSE`、`package.json`。
 
 真宿主里加载一次（用你本机 profile 的依赖解析，不改任何配置）：
 
