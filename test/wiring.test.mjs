@@ -81,6 +81,11 @@ function makeAgent(selection) {
 			},
 		},
 		async followup(message) {
+			// Mirror the host contract: a user message appended to the session must
+			// carry an id and the expected role, or the log becomes unreadable.
+			assert.equal(message?.role, "user");
+			assert.equal(typeof message?.id, "string");
+			assert.ok(message.id.length > 0);
 			followups.push(message);
 		},
 	};
@@ -120,6 +125,10 @@ test("switches to another provider and re-drives the interrupted turn", async ()
 	await settled();
 
 	assert.equal(agent.followups.length, 1);
+	// The host writes this object verbatim as `user/message`; without id/role the
+	// session log fails validation on reload ("lacks an identified message").
+	assert.equal(agent.followups[0].role, "user");
+	assert.match(agent.followups[0].id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 	const text = agent.followups[0].content[0].text;
 	assert.match(text, /mimo-v2\.5/);
 	assert.match(text, /deepseek-v4-1-flash-260910/);
