@@ -2,14 +2,14 @@
 
 这份文档只给维护者看：它不会被 `npm pack` 打进 tarball（`files` 里没有它）。
 
-## 0. 当前状态（2026-11-20）
+## 0. 当前状态（2026-11-23）
 
 | 项 | 值 |
 | --- | --- |
-| npm | `dsh-smart-model-failover@0.2.6` 已发布、`latest` 指向它（0.1.0 仍可安装）；0.2.0 修复了自动续跑消息缺少 `id`/`role` 导致会话日志被判 corrupt 的问题，0.2.3 把插件描述改成不点名其他插件，0.2.4 增加可视化设置面板，0.2.5 让候选先按模型家族（默认 `deepseek`）再按版本（`v4.1` 先于 `v4`）排序，并重做面板样式，0.2.6 把设置面板截图放进 README（npm 与 GitHub 页面都能看到）并写明设置入口 |
+| npm | `dsh-smart-model-failover@0.2.7` 已发布、`latest` 指向它（0.1.0 仍可安装）；0.2.0 修复了自动续跑消息缺少 `id`/`role` 导致会话日志被判 corrupt 的问题，0.2.3 把插件描述改成不点名其他插件，0.2.4 增加可视化设置面板，0.2.5 让候选先按模型家族（默认 `deepseek`）再按版本（`v4.1` 先于 `v4`）排序，并重做面板样式，0.2.6 把设置面板截图放进 README（npm 与 GitHub 页面都能看到）并写明设置入口，0.2.7 把插件描述改为中文、把设置面板截图提到 README 顶部并改用 jsDelivr CDN（国内可访问） |
 | 仓库 | https://github.com/success-c/dsh-smart-model-failover（public，topics 含 `dsh-plugin`） |
-| 收录 PR | https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/17165（只加 1 个文件 `data/plugins/success-c__dsh-smart-model-failover.yml`） |
-| 待过门槛 | 精选列表 CI 要求仓库创建满 1 天；今天刚建库，CI 的 age 项会自动重跑通过，**不需要推空提交** |
+| 收录 PR | https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/17165（**已于 2026-11-22T16:59:27Z 合并**，共 1 个文件 `data/plugins/success-c__dsh-smart-model-failover.yml`；官网详情页已上线，DSH Discover 索引等 nightly 构建后可见） |
+| 市场门槛 | 仓库创建满 1 天的 CI 门槛已随合并通过，无需再处理 |
 
 下面第 1-5 节保留为完整流程记录，方便以后发新版本或换账号时照做。
 
@@ -20,6 +20,7 @@
   先在 https://www.npmjs.com/settings/~/profile 开启 Authenticator app，或用带 Bypass 2FA 的 Granular token。
 - **新包名首发会先出现 `0.0.0-stage` 占位**（npm 的 staged publishing）。`npm publish` 报成功但
   `npm view <pkg> version` 仍显示 `0.0.0-stage`，等 1-3 分钟真实版本才可见；别在这个窗口里误判发布失败、急着换包名。
+- **0.2.7（2026-11-23）**：`package.json` 的 `description` 改为中文（插件卡片与 npm 包页直接显示中文描述，含设置入口）；README 中英把「设置面板」截图从「在哪里设置」小节**提到顶部**（紧跟简介），图片地址从 `raw.githubusercontent.com` 改为 `cdn.jsdelivr.net/gh/...@main/...`，国内网络也能加载。
 - **0.2.6（2026-11-20）**：README（中英）新增「在哪里设置 / Where to configure it」章节，内嵌 `assets/settings-panel.png`（设置面板实图）与三步入口（左侧「插件」→ 点 `dsh-smart-model-failover` → 详情页下方表单 → 「保存」）；`package.json` 的 `files` 加入 `assets`，description 末尾补一句设置入口提示，让插件卡片本身也指向设置面板。
 - **0.2.5（2026-11-20）**：候选排序改为「同族 + 高版本」——`modelPreference` 默认 `["deepseek"]`，同一厂商内版本更高的模型优先（`deepseek-v4.1` 先于 `deepseek-v4`，`-260425` 这类日期后缀不会被当成版本号）；跨厂商时能出该家族的厂商排在前面。设置面板重做样式：分组卡片、行序号、厂商徽标 + 等宽模型名、拖动高亮与只在悬停时出现的操作按钮。
 - **0.2.4（2026-11-20）**：新增 Web 客户端设置面板（`plugins.bundle.config`）——总开关、模型调用顺序（默认展示自动发现顺序，可拖动/新增/删除，新增时下拉列出本 profile 已配置厂商能列出的模型）、厂商优先顺序；新增只读路由 `/smart-model-failover/plan` 向面板提供实时候选，下拉只列已配置厂商的模型，并保留手写输入。
@@ -50,11 +51,11 @@
 
 ```sh
 npm install
-npm test          # 38 个测试，应全绿
+npm test          # 41 个测试，应全绿
 npm pack --dry-run
 ```
 
-`npm pack --dry-run` 应看到 10 个文件：`lib/` 5 个、`cordis.patch.yml`、两个 README、`LICENSE`、`package.json`。
+`npm pack --dry-run` 应看到 12 个文件：`lib/` 5 个、`assets/settings-panel.png`、`cordis.patch.yml`、两个 README、`LICENSE`、`package.json`。
 
 真宿主里加载一次（用你本机 profile 的依赖解析，不改任何配置）：
 

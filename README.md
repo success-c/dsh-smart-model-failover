@@ -4,6 +4,12 @@
 >
 > 候选池不是写死的一份名单，而是运行时从宿主发现的「本 profile 里所有已配置厂商 + 其他插件注册进宿主的厂商」的全部模型。
 
+## 设置面板
+
+![插件设置面板：总开关、模型调用顺序、厂商优先顺序](https://cdn.jsdelivr.net/gh/success-c/dsh-smart-model-failover@main/assets/settings-panel.png)
+
+位置：左侧菜单「插件」→ 点 `dsh-smart-model-failover` → 详情页设置表单（总开关、模型调用顺序、厂商优先顺序）。改完点「保存」立即生效，详见下方[在哪里设置](#在哪里设置)。
+
 ## 为什么需要
 
 DSH 自带的 `llm-retry` 只会对同一路由做退避重试：额度耗尽、密钥失效、模型下线、厂商整段不可用时，它重试到上限就结束，整轮工作白做。手写一份静态名单能救一时，但每接一个厂商、每换一个模型都要改配置，外部接入的模型更是永远进不了名单。
@@ -41,8 +47,6 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 安装后**重启 DSH**。插件作为 bundle 层自动挂进 profile（`dsh.bundle.patch`），无需手工改 `cordis.patch.yml`。
 
 ## 在哪里设置
-
-![插件设置面板：总开关、模型调用顺序、厂商优先顺序](https://raw.githubusercontent.com/success-c/dsh-smart-model-failover/main/assets/settings-panel.png)
 
 1. 左侧菜单点「插件」，在已安装列表里点 `dsh-smart-model-failover`；
 2. 在插件详情页向下滚到设置表单——就是上图这块：**启用错误自动切换**（总开关）、**模型调用顺序**（默认直接展示自动发现的顺序，可拖动/新增/删除）、**厂商优先顺序**；

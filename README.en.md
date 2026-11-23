@@ -4,6 +4,12 @@
 >
 > The candidate pool is not a hard-coded list. It is discovered at runtime from the host: every provider configured in the profile, plus every provider another plugin registers with the host — and every model each of them can list.
 
+## Settings panel
+
+![The plugin settings panel: master switch, model order, provider order](https://cdn.jsdelivr.net/gh/success-c/dsh-smart-model-failover@main/assets/settings-panel.png)
+
+Where: **Plugins** in the left sidebar → `dsh-smart-model-failover` → the form on the detail page (master switch, model order, provider order). Click **Save** to apply immediately; see [Where to configure it](#where-to-configure-it) below.
+
 ## Why
 
 DSH's built-in `llm-retry` only backs off and retries the *same* route. When a quota runs out, a credential dies, a model is retired, or a whole provider goes down, it exhausts its retries and the work in that turn is lost. A hand-written static list helps for a while, but every new provider or model means editing config — and externally connected models never make it into the list at all.
@@ -37,8 +43,6 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 The plugin ships a bundle patch (`dsh.bundle.patch`), so it mounts itself into the profile; no manual `cordis.patch.yml` edit is needed. Restart DSH afterwards.
 
 ## Where to configure it
-
-![The plugin settings panel: master switch, model order, provider order](https://raw.githubusercontent.com/success-c/dsh-smart-model-failover/main/assets/settings-panel.png)
 
 1. Click **Plugins** in the left sidebar, then click `dsh-smart-model-failover` in the installed list;
 2. Scroll down the plugin page to the settings form shown above: **auto failover switch**, **model attempt order** (the discovered order is rendered directly; drag, add or delete rows), and **provider priority**;
