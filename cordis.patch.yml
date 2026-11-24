@@ -8,7 +8,7 @@
 #   - id: smart-model-failover
 #     config:
 #       providerPriority: [vendorA, vendorB]
-#       cooldownMs: 300000
+#       cooldownMs: 1800000
 #
 # Leaving `order` empty means: candidates come purely from live discovery — every
 # provider configured in this profile, plus every provider another plugin

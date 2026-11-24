@@ -42,6 +42,10 @@ test("normalizeConfig falls back to defaults for empty input", () => {
 	assert.deepEqual(cfg.modelPreference, DEFAULTS.modelPreference.map((item) => item.toLowerCase()));
 });
 
+test("the default cooldown keeps a failed route parked for five hours", () => {
+	assert.equal(DEFAULTS.cooldownMs, 5 * 60 * 60 * 1000);
+});
+
 test("normalizeConfig accepts wild input without throwing", () => {
 	const cfg = normalizeConfig({
 		order: ["huoshan/m1", "huoshan/", "meng/mimo-v2.5", "workbuddy1"],

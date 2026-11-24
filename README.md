@@ -23,7 +23,7 @@ DSH 自带的 `llm-retry` 只会对同一路由做退避重试：额度耗尽、
 - **零名单**：`order` 默认留空，候选完全来自 `ctx.llm.listProviders()` + `listModels()`。
 - **覆盖外部接入**：任何插件注册进宿主的 provider 都会自动进入候选池，无需为本插件单独适配。
 - **逐个厂商**：每个厂商只出一个候选（按 `modelPreference` 与版本挑模型），失败就换下一家，不在一家厂商多点乱撞。
-- **不重复踩坑**：同一轮里失败过的路由不再尝试；失败路由按错误类型冷却（普通错误 10 分钟，密钥/额度/模型下线类 24 小时）。
+- **不重复踩坑**：同一轮里失败过的路由不再尝试；失败路由按错误类型冷却（普通错误默认 **5 小时**，密钥/额度/模型下线类 24 小时），所以新的一轮不会又从配置顺序的第一个模型重新试起。
 - **两个阶段，不抢主机的活**：先 `await next()` 让 `llm-retry` 等下游先决定；它们不接管时才自己做故障转移。
 - **不污染会话**：切换记录只写独立日志文件；续跑消息是一个带 `id`/`role` 的完整 user message，与宿主自身写入的 session v4 格式一致。路由变化本身由宿主记入 `model/selection` 并显示 `[model changed: ...]` 提示。
 - **可视化设置面板**：插件详情页提供总开关（是否启用错误自动切换）、模型调用顺序（默认自动发现顺序直接展示，可拖动排序、新增/删除）、厂商优先顺序；新增时下拉列出本 profile 已配置厂商能列出的模型/厂商，也支持手写。
@@ -66,7 +66,7 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 | `modelPreference` | `["deepseek"]` | 自动发现时，为每个厂商挑哪个模型：优先匹配靠前的子串（默认 `deepseek`，让切换留在同一模型家族） |
 | `excludeProviders` | `[]` | 永不作为切换目标的厂商 |
 | `excludePatterns` | `["embed","rerank","moderation"]` | 永不作为切换目标的模型 id 子串（不区分大小写） |
-| `cooldownMs` | `600000` | 失败路由冷却时长（毫秒） |
+| `cooldownMs` | `18000000` | 失败路由冷却时长（毫秒，默认 5 小时） |
 | `maxSwitches` | `3` | 单轮最多自动切换次数；`0` = 不限（以候选池为上限） |
 | `resume` | `true` | 切换后是否自动续跑被打断的那一轮 |
 | `discoverTtlMs` | `300000` | 模型目录缓存时长（毫秒） |
@@ -112,7 +112,7 @@ dsh plugin --profile desktop add dsh-smart-model-failover
 
 被跳过：本轮已试过的路由、正在冷却的路由、`excludeProviders`、`excludePatterns`、正在失败的那条，以及**本轮已经失败过的厂商**（失败一次就换下一家，不再在同一厂商上换模型重试）。
 
-冷却时长按错误码分档：密钥/额度/模型下线等**重试也不会自愈**的错误码（`AUTH`、`MISSING_CREDENTIAL`、`ACCOUNT_QUOTA`、`ACCOUNT_TOKEN_INVALID`、`UNKNOWN_MODEL`、`MODEL_UNSUPPORTED`、`NO_ADAPTER` 等）冷却 24 小时；其余按 `cooldownMs`。
+冷却时长按错误码分档：密钥/额度/模型下线等**重试也不会自愈**的错误码（`AUTH`、`MISSING_CREDENTIAL`、`ACCOUNT_QUOTA`、`ACCOUNT_TOKEN_INVALID`、`UNKNOWN_MODEL`、`MODEL_UNSUPPORTED`、`NO_ADAPTER` 等）冷却 24 小时；其余按 `cooldownMs`（默认 5 小时）。冷却表跨轮次保留：刚失败的模型不会在下一轮又被当成第一个候选，5 小时内不会再选中它。
 
 ## 日志
 

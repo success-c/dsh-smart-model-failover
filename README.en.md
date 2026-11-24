@@ -21,7 +21,7 @@ This plugin asks the host *what can run right now*, walks the providers **in the
 - **No list to maintain** — `order` defaults to empty; candidates come from `ctx.llm.listProviders()` + `listModels()`.
 - **Covers external connections** — any provider another plugin registers with the host joins the pool automatically; no per-plugin integration required.
 - **Provider by provider** — one candidate per provider (chosen by `modelPreference` and version), then the next vendor when it fails; no retry roulette inside one vendor.
-- **No repeated dead ends** — a route that already failed in this turn is never retried; failed routes cool down (10 min for ordinary errors, 24 h for credential/quota/retired-model codes).
+- **No repeated dead ends** — a route that already failed in this turn is never retried; failed routes cool down (**5 h** for ordinary errors by default, 24 h for credential/quota/retired-model codes), so a fresh turn does not start by retrying the same first model again.
 - **Two-stage, never fights the host** — calls `await next()` first so `llm-retry` and other owners keep priority.
 - **Does not touch session history** — switches are logged to a separate file; the host itself records the route change (`model/selection` + its `[model changed: ...]` notice).
 - **Visual settings panel** — from the plugin detail page: a master switch for automatic failover, the model call order (the auto-discovered default is shown, drag to reorder / add / remove), and provider priority. The add box offers a dropdown of the models/providers this profile's configured providers can list, and still accepts free text.
@@ -62,7 +62,7 @@ All fields have defaults; an empty config means "pure discovery".
 | `modelPreference` | `["deepseek"]` | Which model to pick per provider during discovery: earliest substring match wins (`deepseek` by default, so a switch stays in the same model family) |
 | `excludeProviders` | `[]` | Providers never used as a target |
 | `excludePatterns` | `["embed","rerank","moderation"]` | Model-id substrings never used as a target (case-insensitive) |
-| `cooldownMs` | `600000` | How long a failed route stays parked |
+| `cooldownMs` | `18000000` | How long a failed route stays parked (5 hours by default) |
 | `maxSwitches` | `3` | Max automatic switches per episode; `0` = unlimited (bounded by the pool) |
 | `resume` | `true` | Re-drive the interrupted turn after a switch |
 | `discoverTtlMs` | `300000` | Model catalog cache TTL |
@@ -110,7 +110,7 @@ Candidate order:
 
 Skipped: routes already tried this turn, routes cooling down, `excludeProviders`, `excludePatterns`, the route that just failed, and **providers that already failed this turn** (one failure per vendor, then move on).
 
-Cooldown is code-aware: errors that cannot heal by retrying (`AUTH`, `MISSING_CREDENTIAL`, `ACCOUNT_QUOTA`, `ACCOUNT_TOKEN_INVALID`, `UNKNOWN_MODEL`, `MODEL_UNSUPPORTED`, `NO_ADAPTER`, ...) park the route for 24 hours; anything else uses `cooldownMs`.
+Cooldown is code-aware: errors that cannot heal by retrying (`AUTH`, `MISSING_CREDENTIAL`, `ACCOUNT_QUOTA`, `ACCOUNT_TOKEN_INVALID`, `UNKNOWN_MODEL`, `MODEL_UNSUPPORTED`, `NO_ADAPTER`, ...) park the route for 24 hours; anything else uses `cooldownMs` (5 hours by default). The cooldown table survives turn boundaries: a model that just failed is not the first candidate again next turn and stays out of the rotation for five hours.
 
 ## Log
 

@@ -196,6 +196,61 @@ test("never retries a route that already failed in this episode", async () => {
 	harness.dispose();
 });
 
+test("keeps a failed route parked across turns, so a new turn does not start on it", async () => {
+	const harness = makeHarness({
+		providers: ["a", "b", "c"],
+		models: { a: [{ id: "a1" }], b: [{ id: "b1" }], c: [{ id: "c1" }] },
+	});
+	harness.start({ resume: false, maxSwitches: 0 });
+	const agent = makeAgent({ provider: "a", model: "a1" });
+
+	await harness.requestError(failure(agent));
+	assert.deepEqual(agent.model.current(), { provider: "b", model: "b1" });
+	agent.status = "idle";
+	harness.emit("agent/status", { agent, status: "idle" });
+
+	// New episode: `a` must still be parked by the persistent cooldown table.
+	await harness.requestError(failure(agent));
+	assert.deepEqual(agent.model.current(), { provider: "c", model: "c1" });
+
+	await harness.requestError(failure(agent));
+	assert.deepEqual(agent.model.current(), { provider: "c", model: "c1" }, "all three routes are cooling");
+	const exhausted = harness.records().find((record) => record.kind === "exhausted");
+	assert.equal(exhausted?.cooling, 3);
+	harness.dispose();
+});
+
+test("retries a parked route once its five-hour cooldown expires", async () => {
+	const harness = makeHarness({
+		providers: ["a", "b", "c"],
+		models: { a: [{ id: "a1" }], b: [{ id: "b1" }], c: [{ id: "c1" }] },
+	});
+	harness.start({ resume: false, maxSwitches: 0 });
+	const agent = makeAgent({ provider: "a", model: "a1" });
+	const originalNow = Date.now;
+	let now = 1_700_000_000_000;
+	Date.now = () => now;
+	try {
+		await harness.requestError(failure(agent));
+		assert.deepEqual(agent.model.current(), { provider: "b", model: "b1" });
+		agent.status = "idle";
+		harness.emit("agent/status", { agent, status: "idle" });
+
+		now += 5 * 60 * 60 * 1000 - 1;
+		await harness.requestError(failure(agent));
+		assert.deepEqual(agent.model.current(), { provider: "c", model: "c1" }, "a is still inside its five-hour window");
+
+		now += 1;
+		agent.status = "idle";
+		harness.emit("agent/status", { agent, status: "idle" });
+		await harness.requestError(failure(agent));
+		assert.deepEqual(agent.model.current(), { provider: "a", model: "a1" }, "a is eligible again after five hours");
+	} finally {
+		Date.now = originalNow;
+		harness.dispose();
+	}
+});
+
 test("reports a selection the host refused to apply", async () => {
 	const harness = makeHarness({ providers: ["huoshan", "meng"], models: { huoshan: [{ id: "a" }], meng: [{ id: "b" }] } });
 	harness.start();
