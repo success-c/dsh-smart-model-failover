@@ -220,6 +220,38 @@ test("keeps a failed route parked across turns, so a new turn does not start on 
 	harness.dispose();
 });
 
+test("parks a rate-limited route for five minutes, then offers it again", async () => {
+	const harness = makeHarness({
+		providers: ["a", "b", "c"],
+		models: { a: [{ id: "a1" }], b: [{ id: "b1" }], c: [{ id: "c1" }] },
+	});
+	harness.start({ resume: false, maxSwitches: 0 });
+	const agent = makeAgent({ provider: "a", model: "a1" });
+	const originalNow = Date.now;
+	let now = 1_700_000_000_000;
+	Date.now = () => now;
+	try {
+		await harness.requestError(failure(agent, "RATE_LIMIT"));
+		assert.deepEqual(agent.model.current(), { provider: "b", model: "b1" });
+		assert.equal(harness.records().find((record) => record.kind === "cooling")?.ms, 5 * 60 * 1000);
+		agent.status = "idle";
+		harness.emit("agent/status", { agent, status: "idle" });
+
+		now += 5 * 60 * 1000 - 1;
+		await harness.requestError(failure(agent, "RATE_LIMIT"));
+		assert.deepEqual(agent.model.current(), { provider: "c", model: "c1" }, "a is still inside its five-minute window");
+
+		now += 1;
+		agent.status = "idle";
+		harness.emit("agent/status", { agent, status: "idle" });
+		await harness.requestError(failure(agent, "RATE_LIMIT"));
+		assert.deepEqual(agent.model.current(), { provider: "a", model: "a1" }, "a is eligible again after five minutes");
+	} finally {
+		Date.now = originalNow;
+		harness.dispose();
+	}
+});
+
 test("retries a parked route once its five-hour cooldown expires", async () => {
 	const harness = makeHarness({
 		providers: ["a", "b", "c"],
@@ -231,19 +263,19 @@ test("retries a parked route once its five-hour cooldown expires", async () => {
 	let now = 1_700_000_000_000;
 	Date.now = () => now;
 	try {
-		await harness.requestError(failure(agent));
+		await harness.requestError(failure(agent, "UNKNOWN"));
 		assert.deepEqual(agent.model.current(), { provider: "b", model: "b1" });
 		agent.status = "idle";
 		harness.emit("agent/status", { agent, status: "idle" });
 
 		now += 5 * 60 * 60 * 1000 - 1;
-		await harness.requestError(failure(agent));
+		await harness.requestError(failure(agent, "UNKNOWN"));
 		assert.deepEqual(agent.model.current(), { provider: "c", model: "c1" }, "a is still inside its five-hour window");
 
 		now += 1;
 		agent.status = "idle";
 		harness.emit("agent/status", { agent, status: "idle" });
-		await harness.requestError(failure(agent));
+		await harness.requestError(failure(agent, "UNKNOWN"));
 		assert.deepEqual(agent.model.current(), { provider: "a", model: "a1" }, "a is eligible again after five hours");
 	} finally {
 		Date.now = originalNow;

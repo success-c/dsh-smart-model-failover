@@ -62,7 +62,7 @@ All fields have defaults; an empty config means "pure discovery".
 | `modelPreference` | `["deepseek"]` | Which model to pick per provider during discovery: earliest substring match wins (`deepseek` by default, so a switch stays in the same model family) |
 | `excludeProviders` | `[]` | Providers never used as a target |
 | `excludePatterns` | `["embed","rerank","moderation"]` | Model-id substrings never used as a target (case-insensitive) |
-| `cooldownMs` | `18000000` | How long a failed route stays parked (5 hours by default) |
+| `cooldownMs` | `18000000` | How long an ordinary failed route stays parked (5 hours by default; 429/502 transient errors are fixed at 5 minutes and ignore this value) |
 | `maxSwitches` | `3` | Max automatic switches per episode; `0` = unlimited (bounded by the pool) |
 | `resume` | `true` | Re-drive the interrupted turn after a switch |
 | `discoverTtlMs` | `300000` | Model catalog cache TTL |
@@ -110,7 +110,7 @@ Candidate order:
 
 Skipped: routes already tried this turn, routes cooling down, `excludeProviders`, `excludePatterns`, the route that just failed, and **providers that already failed this turn** (one failure per vendor, then move on).
 
-Cooldown is code-aware: errors that cannot heal by retrying (`AUTH`, `MISSING_CREDENTIAL`, `ACCOUNT_QUOTA`, `ACCOUNT_TOKEN_INVALID`, `UNKNOWN_MODEL`, `MODEL_UNSUPPORTED`, `NO_ADAPTER`, ...) park the route for 24 hours; anything else uses `cooldownMs` (5 hours by default). The cooldown table survives turn boundaries: a model that just failed is not the first candidate again next turn and stays out of the rotation for five hours.
+Cooldown is error-aware: transient failures such as a 429/rate limit or a 502/network blip (`RATE_LIMIT`, `TOO_MANY_REQUESTS`, `BAD_GATEWAY`, `NETWORK_ERROR`, or a message containing `502` / `too many requests` / `rate limit`) park the route for only **5 minutes** and then offer it again; errors that cannot heal by retrying (`AUTH`, `MISSING_CREDENTIAL`, `ACCOUNT_QUOTA`, `ACCOUNT_TOKEN_INVALID`, `UNKNOWN_MODEL`, `MODEL_UNSUPPORTED`, `NO_ADAPTER`, ...) park it for 24 hours; anything else uses `cooldownMs` (5 hours by default). The cooldown table survives turn boundaries.
 
 ## Log
 

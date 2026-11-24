@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+	cooldownFor,
 	DEFAULTS,
 	formatPrompt,
+	isTransientFailure,
 	LONG_COOLDOWN_CODES,
 	normalizeConfig,
 	NON_SWITCH_CODES,
 	parseRoute,
 	routeLabel,
+	TRANSIENT_COOLDOWN_MS,
 	unwrapConfig,
 	withTimeout,
 } from "../lib/util.js";
@@ -44,6 +47,22 @@ test("normalizeConfig falls back to defaults for empty input", () => {
 
 test("the default cooldown keeps a failed route parked for five hours", () => {
 	assert.equal(DEFAULTS.cooldownMs, 5 * 60 * 60 * 1000);
+});
+
+test("rate limits and 502/network blips only park for five minutes", () => {
+	assert.equal(TRANSIENT_COOLDOWN_MS, 5 * 60 * 1000);
+	for (const code of ["RATE_LIMIT", "TOO_MANY_REQUESTS", "BAD_GATEWAY", "NETWORK_ERROR"]) {
+		assert.equal(isTransientFailure(code, undefined), true, code);
+		assert.equal(cooldownFor(code, undefined, DEFAULTS.cooldownMs), TRANSIENT_COOLDOWN_MS, code);
+	}
+	assert.equal(isTransientFailure("HTTP", { status: 502 }), true);
+	assert.equal(isTransientFailure("HTTP", { status: 429 }), true);
+	assert.equal(isTransientFailure("UNKNOWN", { message: "502 Bad Gateway" }), true);
+	assert.equal(isTransientFailure("UNKNOWN", { message: "请求太频繁，请稍后再试" }), true);
+	// Permanent failures keep the long park, not the transient one.
+	assert.equal(isTransientFailure("AUTH", undefined), false);
+	assert.equal(cooldownFor("AUTH", undefined, DEFAULTS.cooldownMs), 86_400_000);
+	assert.equal(cooldownFor("UNKNOWN", undefined, DEFAULTS.cooldownMs), DEFAULTS.cooldownMs);
 });
 
 test("normalizeConfig accepts wild input without throwing", () => {
