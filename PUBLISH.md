@@ -6,7 +6,7 @@
 
 | 项 | 值 |
 | --- | --- |
-| npm | `dsh-smart-model-failover@0.2.7` 已发布、`latest` 指向它（0.1.0 仍可安装）；0.2.0 修复了自动续跑消息缺少 `id`/`role` 导致会话日志被判 corrupt 的问题，0.2.3 把插件描述改成不点名其他插件，0.2.4 增加可视化设置面板，0.2.5 让候选先按模型家族（默认 `deepseek`）再按版本（`v4.1` 先于 `v4`）排序，并重做面板样式，0.2.6 把设置面板截图放进 README（npm 与 GitHub 页面都能看到）并写明设置入口，0.2.7 把插件描述改为中文、把设置面板截图提到 README 顶部并改用 jsDelivr CDN（国内可访问），0.2.8 把普通失败的冷却从 10 分钟改成 5 小时（失败过的模型跨轮次也不会再被第一个重试），密钥/额度等错误仍固定 24 小时 |
+| npm | `dsh-smart-model-failover@0.2.8` 已发布、`latest` 指向它（0.1.0 仍可安装）；0.2.0 修复了自动续跑消息缺少 `id`/`role` 导致会话日志被判 corrupt 的问题，0.2.3 把插件描述改成不点名其他插件，0.2.4 增加可视化设置面板，0.2.5 让候选先按模型家族（默认 `deepseek`）再按版本（`v4.1` 先于 `v4`）排序，并重做面板样式，0.2.6 把设置面板截图放进 README（npm 与 GitHub 页面都能看到）并写明设置入口，0.2.7 把插件描述改为中文、把设置面板截图提到 README 顶部并改用 jsDelivr CDN（国内可访问），0.2.8 把普通失败的冷却从 10 分钟改成 5 小时（失败过的模型跨轮次也不会再被第一个重试），密钥/额度等错误仍固定 24 小时 |
 | 仓库 | https://github.com/success-c/dsh-smart-model-failover（public，topics 含 `dsh-plugin`） |
 | 收录 PR | https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/17165（**已于 2026-11-22T16:59:27Z 合并**，共 1 个文件 `data/plugins/success-c__dsh-smart-model-failover.yml`；官网详情页已上线，DSH Discover 索引等 nightly 构建后可见） |
 | 市场门槛 | 仓库创建满 1 天的 CI 门槛已随合并通过，无需再处理 |
